@@ -1,25 +1,9 @@
 import gymnasium as gym
 import numpy as np
 
-from backtothecode_gym.envs.lib.board import ReadOnlyBoard
 from backtothecode_gym.envs.lib.renderer import PrintRenderer
 from backtothecode_gym.envs import BackToTheCodeEnv, BackToTheCodeEnvParams
-
-class Player:
-    def __init__(self):
-      pass
-
-    def reset(self, id, board : ReadOnlyBoard):
-      self.id = id
-      self.board = board
-
-    def move(self):
-      raise NotImplementedError()
-
-class RandomPlayer(Player):
-    def move(self):
-        possible_actions = list(self.board.get_possible_actions(self.id))
-        return np.random.choice(possible_actions)
+from backtothecode_players import RandomPlayer
     
 # create the cartpole environment
 env = gym.make('BackToTheCode', 
