@@ -116,12 +116,18 @@ class ReadOnlyBoard:
     
     def get_ownership(self, position):
         return self._board.get_ownership(position)
+
+    def get_ownerships(self):
+        return self._board._ownership
     
     def within_board(self, position):
         return self._board.within_board(position)
     
     def get_possible_actions(self, player_id):
         return self._board.get_possible_actions(player_id)
+
+    def get_player_positions(self):
+        return (self.get_position(player_id) for player_id in range(self.num_players))
     
     @property
     def height(self):

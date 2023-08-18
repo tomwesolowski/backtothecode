@@ -16,7 +16,7 @@ class BackToTheCodeEnvParams():
 class BackToTheCodeEnv(gym.Env):
     metadata = {'render_modes': ['human']}
 
-    def __init__(self, opponent, renderer, board_size=[35, 20], **kwargs):
+    def __init__(self, opponent, renderer, board_size=[20, 35], **kwargs):
         super().__init__()
 
         self.num_players = 2
@@ -71,6 +71,7 @@ class BackToTheCodeEnv(gym.Env):
     def seed(self, x):
         pass
 
-    def get_board(self):
+    @property
+    def board(self):
         return ReadOnlyBoard(self.board)
         
