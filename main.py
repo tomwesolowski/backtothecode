@@ -3,7 +3,7 @@ import numpy as np
 
 from backtothecode_gym.envs.lib.renderer import PrintRenderer
 from backtothecode_gym.envs import BackToTheCodeEnv, BackToTheCodeEnvParams
-from backtothecode_players import RandomPlayer
+from backtothecode_players import RandomPlayer, KeyboardPlayer
     
 # create the cartpole environment
 env = gym.make('BackToTheCode', 
@@ -11,7 +11,7 @@ env = gym.make('BackToTheCode',
                opponent=RandomPlayer(), 
                renderer=PrintRenderer())
 
-hero = RandomPlayer()
+hero = KeyboardPlayer()
 
 for episode in range(1):
   env.reset()
