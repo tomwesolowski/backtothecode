@@ -1,7 +1,9 @@
 # Byte-compiled / optimized / DLL files
-**/__pycache__/
+**/__pycache__/*
+__pycache__/
 *.py[cod]
 *$py.class
+*.pyc
 
 # C extensions
 *.so
@@ -154,6 +156,9 @@ cython_debug/
 
 # Jupyter
 **/.ipynb_checkpoints/
+
+# VS Cpde
+.vscode/
 
 # PyCharm
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
