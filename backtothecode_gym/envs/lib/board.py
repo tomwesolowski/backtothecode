@@ -11,8 +11,8 @@ class Board:
         self._ownership = np.full((height, width), -1)
         self.num_players = len(initial_positions)
         self._positions = initial_positions
-        for id in range(self.num_players):
-            self.set_ownership(self.get_position(id), id) 
+        for player_id in range(self.num_players):
+            self.set_ownership(self.get_position(player_id), player_id) 
         self._actions_buffer = []
     
     def _find_best_direction(self, position, destination):
@@ -45,6 +45,8 @@ class Board:
 
     def set_ownership(self, position, player_id):
         y, x = position
+        if self._ownership[y][x] != -1:
+            raise Exception(f"Field ({y}, {x}) is already owned")
         self._ownership[y][x] = player_id
     
     def get_ownership(self, position):
@@ -70,9 +72,6 @@ class Board:
     
     def get_new_position(self, player_id, direction):
         position = self.get_position(player_id)
-        # direction = self._find_best_direction(
-        #     position, destination
-        # )
         return utils.move_in_direction(position, direction)
     
     def num_empty_cells(self):
@@ -96,14 +95,15 @@ class Board:
                 self.make_action(player_id, action_id)
             except Exception:
                 return None, None, True
-        for id in range(self.num_players):
-            new_position_count[self.get_position(id)] += 1
-        for id in range(self.num_players):
-            position = self.get_position(id)
+        for player_id in range(self.num_players):
+            new_position_count[self.get_position(player_id)] += 1
+        for player_id in range(self.num_players):
+            position = self.get_position(player_id)
             if (self.get_ownership(position) == -1 and 
                 new_position_count[position] == 1):
                 self.set_ownership(position, player_id)
-                rewards[id] += 1
+                rewards[player_id] += 1
+        self._actions_buffer.clear()
         return self.get_observations(), rewards, False
             
 

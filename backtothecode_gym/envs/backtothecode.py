@@ -16,14 +16,14 @@ class BackToTheCodeEnvParams():
 class BackToTheCodeEnv(gym.Env):
     metadata = {'render_modes': ['human']}
 
-    def __init__(self, opponent_cls, renderer_cls, board_size=[35, 20], **kwargs):
+    def __init__(self, opponent, renderer, board_size=[35, 20], **kwargs):
         super().__init__()
 
         self.num_players = 2
         self.board_size = board_size
         self.board_height, self.board_width = self.board_size
-        self.opponent_cls = opponent_cls        
-        self.renderer_cls = renderer_cls
+        self.opponent = opponent       
+        self.renderer = renderer
         self.action_space = Discrete(4) # WENS
         self.observation_space = MultiDiscrete(
             self.board_size + # hero's position
@@ -60,18 +60,17 @@ class BackToTheCodeEnv(gym.Env):
 
     def reset(self, seed=None, options=None):
         self.board = Board(*self.board_size, self._pick_initial_positions())
-        self.read_only_board = ReadOnlyBoard(self.board)
-        self.opponent = self.opponent_cls(
-            BackToTheCodeEnvParams.OPPONENT_ID, self.read_only_board)
-        self.renderer = self.renderer_cls(
-            self.read_only_board,
-            player_marks=['O', 'X'], ownership_marks=['o', 'x'])
+        self.opponent.reset(BackToTheCodeEnvParams.OPPONENT_ID, self.get_board())
+        self.renderer.reset(self.get_board())
         self.round_number = 1
         return self.board.get_observations(), {}
 
     def render(self):
-        print(f"------- Round {self.round_number}:")
-        self.renderer.render()
+        self.renderer.render(self.round_number)
 
     def seed(self, x):
         pass
+
+    def get_board(self):
+        return ReadOnlyBoard(self.board)
+        
