@@ -11,6 +11,13 @@ def get_directions():
     yield (-1, 0) # up    (N)
     yield (1, 0)  # down  (S)
 
+def get_all_directions():
+    yield from get_directions()
+    yield (-1, -1) # (NW)
+    yield (-1, 1)  # (NE)
+    yield (1, -1)  # (SW)
+    yield (1, 1)   # (SE)
+
 
 def move_in_direction(position, direction):
     py, px = position

@@ -4,8 +4,12 @@ import numpy as np
 from backtothecode_gym.envs.lib.renderer import PrintRenderer
 from backtothecode_gym.envs import BackToTheCodeEnv, BackToTheCodeEnvParams
 from backtothecode_players import RandomPlayer, KeyboardPlayer
-    
-# create the cartpole environment
+
+envs.registration.register(
+    id='BackToTheCode',
+    entry_point='backtothecode_gym.envs:BackToTheCodeEnv',
+)
+
 env = gym.make('BackToTheCode', 
                board_size=(5, 5),
                opponent=RandomPlayer(), 

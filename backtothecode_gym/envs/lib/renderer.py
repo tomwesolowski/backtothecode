@@ -53,10 +53,11 @@ class CanvasRenderer(Renderer):
         self.grid_border_color = '#999'
         self.grid_border_width = 1
         self.cell_pixels = 30
-        self.player_to_color = {0: '#eb2a37', 1: '#33b825'}
-        self.owner_to_color ={0: '#dba4a4', 1: '#aadba4'}
+        self.player_to_color = {1: '#eb2a37', 0: '#33b825'}
+        self.owner_to_color ={1: '#dba4a4', 0: '#aadba4'}
         self.player_border_color = '#555555'
         self.player_border_width = 2
+        self.font_size = 32
 
     def draw_grid(self):
       # with hold_canvas(canvas):
@@ -86,6 +87,13 @@ class CanvasRenderer(Renderer):
             y, x = position
             self.canvas.fill_rect(x * self.cell_pixels, y * self.cell_pixels, self.cell_pixels, self.cell_pixels)
             self.canvas.stroke_rect(x * self.cell_pixels, y * self.cell_pixels, self.cell_pixels, self.cell_pixels)
+
+    def draw_scores(self, players):
+        for player in players:
+            self.canvas.font = f"{self.font_size}px serif"
+            self.canvas.stroke_style = self.player_to_color[player.id]
+            self.canvas.stroke_text(f"{player.name}: {player.score}", 
+                               x=0, y=self.grid_height * self.cell_pixels + (player.id + 1) * self.font_size)
     
     def reset(self, board : ReadOnlyBoard):
         super().reset(board)
@@ -93,12 +101,12 @@ class CanvasRenderer(Renderer):
         self.grid_width = self.board.width
         self.canvas = ipycanvas.Canvas(
             width=self.grid_width * self.cell_pixels, 
-            height=self.grid_height * self.cell_pixels, 
+            height=self.grid_height * self.cell_pixels + (len(self.player_to_color) + 1) * self.font_size, 
             sync_image_data=True
         )
         display(self.canvas)
     
-    def render(self, round_number):
+    def render(self, round_number, players):
         with ipycanvas.hold_canvas():
             self.canvas.clear()
             self.canvas.fill_style = self.background_color
@@ -106,3 +114,4 @@ class CanvasRenderer(Renderer):
             self.draw_grid()
             self.draw_owned_cells()
             self.draw_players()
+            self.draw_scores(players)

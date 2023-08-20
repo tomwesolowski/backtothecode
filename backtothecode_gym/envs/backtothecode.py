@@ -16,13 +16,13 @@ class BackToTheCodeEnvParams():
 class BackToTheCodeEnv(gym.Env):
     metadata = {'render_modes': ['human']}
 
-    def __init__(self, opponent, renderer, board_size=[20, 35], **kwargs):
+    def __init__(self, players, renderer, board_size=[20, 35], **kwargs):
         super().__init__()
 
-        self.num_players = 2
         self.board_size = board_size
         self.board_height, self.board_width = self.board_size
-        self.opponent = opponent       
+        self._players = players
+        self.opponent = self._players[BackToTheCodeEnvParams.OPPONENT_ID]       
         self.renderer = renderer
         self.action_space = Discrete(4) # WENS
         self.observation_space = MultiDiscrete(
@@ -32,15 +32,17 @@ class BackToTheCodeEnv(gym.Env):
 
     def step(self, action):
         opponent_action = self.opponent.move()
-        self.board.add_to_buffer(BackToTheCodeEnvParams.HERO_ID, action)
-        self.board.add_to_buffer(BackToTheCodeEnvParams.OPPONENT_ID, opponent_action)
-        observation, (hero_reward, _), truncated = self.board.finish_round()
+        self._board.add_to_buffer(BackToTheCodeEnvParams.HERO_ID, action)
+        self._board.add_to_buffer(BackToTheCodeEnvParams.OPPONENT_ID, opponent_action)
+        observation, rewards, truncated = self._board.finish_round()
         done = (
             self.round_number >= BackToTheCodeEnvParams.MAX_NUM_ROUNDS or
-            self.board.num_empty_cells() == 0
+            self._board.num_empty_cells() == 0
         )
         self.round_number += 1
-        return observation, hero_reward, done, truncated, {}
+        for player, reward in zip(self._players, rewards):
+            player.score += reward
+        return observation, rewards[BackToTheCodeEnvParams.HERO_ID], done, truncated, {}
     
     def _draw_random_positions(self):
         return (
@@ -50,7 +52,7 @@ class BackToTheCodeEnv(gym.Env):
 
     def _pick_initial_positions(self):
         initial_positions = []
-        for _ in range(self.num_players):
+        for _ in self._players:
             while True:
                 position = self._draw_random_positions()
                 if position not in initial_positions:
@@ -59,19 +61,20 @@ class BackToTheCodeEnv(gym.Env):
         return initial_positions
 
     def reset(self, seed=None, options=None):
-        self.board = Board(*self.board_size, self._pick_initial_positions())
-        self.opponent.reset(BackToTheCodeEnvParams.OPPONENT_ID, self.get_board())
-        self.renderer.reset(self.get_board())
+        self._board = Board(*self.board_size, self._pick_initial_positions())
+        self.renderer.reset(self.board)
         self.round_number = 1
-        return self.board.get_observations(), {}
+        return self._board.get_observations(), {}
 
     def render(self):
-        self.renderer.render(self.round_number)
+        self.renderer.render(self.round_number, self._players)
 
     def seed(self, x):
         pass
 
     @property
     def board(self):
-        return ReadOnlyBoard(self.board)
-        
+        return ReadOnlyBoard(self._board)
+
+    def get_player(self, id):
+        return self._players[id]

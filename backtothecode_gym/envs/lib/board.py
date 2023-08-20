@@ -14,19 +14,17 @@ class Board:
         for player_id in range(self.num_players):
             self.set_ownership(self.get_position(player_id), player_id) 
         self._actions_buffer = []
-    
-    def _find_best_direction(self, position, destination):
-        best_direction, best_distance = None, 1e9
-        for direction in utils.get_directions():
-            new_position = utils.move_in_direction(position, direction)
-            if not self._within_board(new_position):
-                continue
-            distance = utils.calculate_distance(
-                new_position, destination
-            )
-            if distance < best_distance:
-                best_distance, best_direction = distance, direction
-        return best_direction
+        self.error = False
+
+    def get_all_cells(self):
+         for y in range(self.height):
+            for x in range(self.width):
+                yield (y, x)
+
+    def get_free_cells(self):
+         for position in self.get_all_cells():
+             if self.get_ownership(position) == -1:
+                 yield position
     
     def within_board(self, position):
         y, x = position
@@ -90,11 +88,15 @@ class Board:
     def finish_round(self):
         rewards = [0] * self.num_players
         new_position_count = defaultdict(int)
+        # Move players
         for player_id, action_id in self._actions_buffer:
             try:
                 self.make_action(player_id, action_id)
             except Exception:
+                self.error = True
                 return None, None, True
+        self._actions_buffer.clear()
+        # Set ownership of their current cells
         for player_id in range(self.num_players):
             new_position_count[self.get_position(player_id)] += 1
         for player_id in range(self.num_players):
@@ -103,8 +105,46 @@ class Board:
                 new_position_count[position] == 1):
                 self.set_ownership(position, player_id)
                 rewards[player_id] += 1
-        self._actions_buffer.clear()
+        # Set ownership of the surrounded cells
+        for player_id in range(self.num_players):
+            visited_cells = set()
+            for position in self.get_free_cells():
+                unclaimed_cells = set()
+                if position not in visited_cells and self._get_surrounded_cells(position, visited_cells, unclaimed_cells, player_id):
+                    # we did not hit the border nor already onwned cell
+                    for position in unclaimed_cells:
+                        self.set_ownership(position, player_id)
+                        rewards[player_id] += 1
         return self.get_observations(), rewards, False
+
+    def _get_surrounded_cells(self, position, visited_cells, unclaimed_cells, player_id):
+        if not self.within_board(position):
+            return False
+        current_owner = self.get_ownership(position) 
+        if current_owner != -1:
+            return current_owner == player_id
+        if position in visited_cells:
+            return True
+        visited_cells.add(position)
+        unclaimed_cells.add(position)
+        so_far_so_good = True
+        for direction in utils.get_all_directions():
+            new_position = utils.move_in_direction(position, direction)
+            so_far_so_good &= self._get_surrounded_cells(new_position, visited_cells, unclaimed_cells, player_id)
+        return so_far_so_good
+
+    def _find_best_direction(self, position, destination):
+        best_direction, best_distance = None, 1e9
+        for direction in utils.get_directions():
+            new_position = utils.move_in_direction(position, direction)
+            if not self._within_board(new_position):
+                continue
+            distance = utils.calculate_distance(
+                new_position, destination
+            )
+            if distance < best_distance:
+                best_distance, best_direction = distance, direction
+        return best_direction
             
 
 class ReadOnlyBoard:
