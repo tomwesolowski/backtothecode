@@ -5,16 +5,20 @@ from collections import defaultdict
 from . import utils
 
 class Board:
-    def __init__(self, height, width, initial_positions) -> None:
-        self.height = height
-        self.width = width
-        self._ownership = np.full((height, width), -1)
+    def __init__(self, height, width) -> None:
+        self.height, self.width = height, width
+
+    def reset(self, initial_positions):
+        self._ownership = np.full((self.height, self.width), -1)
         self.num_players = len(initial_positions)
         self._positions = initial_positions
         for player_id in range(self.num_players):
             self.set_ownership(self.get_position(player_id), player_id) 
         self._actions_buffer = []
-        self.error = False
+
+    @property
+    def shape(self):
+        return (self.height, self.width)
 
     def get_all_cells(self):
          for y in range(self.height):
@@ -78,12 +82,6 @@ class Board:
             for x in range(self.width):
                 result += self.get_ownership((y, x)) == -1
         return result
-    
-    def get_observations(self):
-        observations = []
-        for player_id in range(self.num_players):
-            observations.extend(list(self.get_position(player_id)))
-        return np.array(observations)
 
     def finish_round(self):
         rewards = [0] * self.num_players
@@ -184,4 +182,8 @@ class ReadOnlyBoard:
     
     @property
     def num_empty_cells(self):
-        return self.board.num_empty_cells
+        return self._board.num_empty_cells
+
+    @property
+    def shape(self):
+        return self._board.shape

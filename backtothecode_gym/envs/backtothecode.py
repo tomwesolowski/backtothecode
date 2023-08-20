@@ -16,19 +16,15 @@ class BackToTheCodeEnvParams():
 class BackToTheCodeEnv(gym.Env):
     metadata = {'render_modes': ['human']}
 
-    def __init__(self, players, renderer, board_size=[20, 35], **kwargs):
+    def __init__(self, board, players, renderer, **kwargs):
         super().__init__()
-
-        self.board_size = board_size
-        self.board_height, self.board_width = self.board_size
+        self._board = board
         self._players = players
-        self.opponent = self._players[BackToTheCodeEnvParams.OPPONENT_ID]       
-        self.renderer = renderer
+        self.hero = self._players[BackToTheCodeEnvParams.HERO_ID]  
+        self.opponent = self._players[BackToTheCodeEnvParams.OPPONENT_ID]   
+        self.renderer = renderer 
         self.action_space = Discrete(4) # WENS
-        self.observation_space = MultiDiscrete(
-            self.board_size + # hero's position
-            self.board_size # opponent's position
-        )
+        self.observation_space = self.hero.get_observation_space()
         self.move_failure_reward = -10**6
 
     def step(self, action):
@@ -48,12 +44,12 @@ class BackToTheCodeEnv(gym.Env):
             self.round_number >= BackToTheCodeEnvParams.MAX_NUM_ROUNDS or
             self._board.num_empty_cells() == 0
         )
-        return self._board.get_observations(), rewards[BackToTheCodeEnvParams.HERO_ID], done, False, {}
+        return self.hero.observe(), rewards[BackToTheCodeEnvParams.HERO_ID], done, False, {}
     
     def _draw_random_positions(self):
         return (
-            np.random.choice(self.board_height),
-            np.random.choice(self.board_width)
+            np.random.choice(self._board.shape[0]),
+            np.random.choice(self._board.shape[1])
         )
 
     def _pick_initial_positions(self):
@@ -67,10 +63,10 @@ class BackToTheCodeEnv(gym.Env):
         return initial_positions
 
     def reset(self, seed=None, options=None):
-        self._board = Board(*self.board_size, self._pick_initial_positions())
+        self._board.reset(self._pick_initial_positions())
         self.renderer.reset(self.board)
         self.round_number = 1
-        return self._board.get_observations(), {}
+        return self.hero.observe(), {}
 
     def render(self):
         self.renderer.render(self.round_number, self._players)
