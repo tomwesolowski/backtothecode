@@ -87,14 +87,15 @@ class Board:
 
     def finish_round(self):
         rewards = [0] * self.num_players
+        move_failures = [False] * self.num_players
         new_position_count = defaultdict(int)
         # Move players
         for player_id, action_id in self._actions_buffer:
             try:
                 self.make_action(player_id, action_id)
             except Exception:
-                self.error = True
-                return None, None, True
+                move_failures[player_id] = True
+                # Do not move and continue
         self._actions_buffer.clear()
         # Set ownership of their current cells
         for player_id in range(self.num_players):
@@ -115,7 +116,7 @@ class Board:
                     for position in unclaimed_cells:
                         self.set_ownership(position, player_id)
                         rewards[player_id] += 1
-        return self.get_observations(), rewards, False
+        return move_failures, rewards
 
     def _get_surrounded_cells(self, position, visited_cells, unclaimed_cells, player_id):
         if not self.within_board(position):

@@ -29,22 +29,26 @@ class BackToTheCodeEnv(gym.Env):
             self.board_size + # hero's position
             self.board_size # opponent's position
         )
+        self.move_failure_reward = -10**6
 
     def step(self, action):
         opponent_action = self.opponent.move()
         self._board.add_to_buffer(BackToTheCodeEnvParams.HERO_ID, action)
         self._board.add_to_buffer(BackToTheCodeEnvParams.OPPONENT_ID, opponent_action)
-        observation, rewards, truncated = self._board.finish_round()
+        move_failures, rewards = self._board.finish_round()
+        if any(move_failures):
+            for id, reward in enumerate(rewards):
+                if move_failures[id]:
+                    rewards[id] = self.move_failure_reward
+        # ALl moves are OK
+        self.round_number += 1
+        for player, reward in zip(self._players, rewards):
+            player.score += reward
         done = (
             self.round_number >= BackToTheCodeEnvParams.MAX_NUM_ROUNDS or
             self._board.num_empty_cells() == 0
         )
-        if truncated:
-            return observation, 0, done, truncated, {}
-        self.round_number += 1
-        for player, reward in zip(self._players, rewards):
-            player.score += reward
-        return observation, rewards[BackToTheCodeEnvParams.HERO_ID], done, truncated, {}
+        return self._board.get_observations(), rewards[BackToTheCodeEnvParams.HERO_ID], done, False, {}
     
     def _draw_random_positions(self):
         return (
