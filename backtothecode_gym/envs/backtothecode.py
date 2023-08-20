@@ -39,6 +39,8 @@ class BackToTheCodeEnv(gym.Env):
             self.round_number >= BackToTheCodeEnvParams.MAX_NUM_ROUNDS or
             self._board.num_empty_cells() == 0
         )
+        if truncated:
+            return observation, 0, done, truncated, {}
         self.round_number += 1
         for player, reward in zip(self._players, rewards):
             player.score += reward
