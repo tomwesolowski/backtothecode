@@ -12,11 +12,11 @@ class KeyboardPlayer(Player):
             's': 3
         }
 
-    def move(self):
+    def move(self, board):
         while True:
             direction = input()
             action = self.keys_to_actions.get(direction, -1)
-            possible_actions = list(self.board.get_possible_actions(self.id))
+            possible_actions = list(board.get_possible_actions(self.id))
             if action in possible_actions:
                 return action
             

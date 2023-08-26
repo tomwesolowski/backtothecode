@@ -3,72 +3,87 @@ import random
 import torch
 
 from collections import deque
+from gymnasium.spaces import MultiDiscrete
+from tqdm import tqdm
+
+from backtothecode_gym.envs import BackToTheCodeEnvParams
 from backtothecode_gym.envs.lib import utils
 from backtothecode_players.player import Player
 
-from .model import Linear_QNet, QTrainer
+from .model import Linear_QNet
+from .trainer import QTrainer
 
-MAX_MEMORY = 100_000
-BATCH_SIZE = 1000
+MAX_MEMORY = 10_000
+BATCH_SIZE = 32
 LR = 0.001
 
 class SimpleAIPlayer(Player):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.n_games = 0
-        self.epsilon = 0 # randomness
+        self.trainable = True
+        self.num_batches_learnt = 0
         self.gamma = 0.9 # discount rate
         self.memory = deque(maxlen=MAX_MEMORY) # popleft()
-        self.model = Linear_QNet(11, 256, 3)
+        self._build_model()
         self.trainer = QTrainer(self.model, lr=LR, gamma=self.gamma)
 
 
     def get_observation_space(self):
-        return MultiDiscrete(
+        return MultiDiscrete([
             3, 3, 3, 3 # 4 cells around me
+        ])
+    
+    def _get_observation_space_size(self):
+        return 4
+    
+    
+    def _build_model(self):
+        self.model = Linear_QNet(
+            self._get_observation_space_size(), 
+            64, 
+            BackToTheCodeEnvParams.NUM_ACTIONS
         )
+    
+    
+    def _run_model(self, observations):
+        state = torch.tensor(observations, dtype=torch.float)
+        return self.model(state)
 
-    def observe(self):
-        observations = []
-        position = self.board.get_position(self.id)
+    def observe(self, board):
+        neighbourhood = []
+        position = board.get_position(self.id)
         for direction in utils.get_directions():
             neighbor_position = utils.move_in_direction(position, direction)
-            if self.board.within_board(neighbor_position):
-                owner = self.board.get_ownership(neighbor_position)
+            if board.within_board(neighbor_position):
+                owner = board.get_ownership(neighbor_position)
                 if owner == -1:
-                    observations.append(1) # free cell
+                    neighbourhood.append(1) # free cell
                 else:
-                    observations.append(0) # owned by someone
+                    neighbourhood.append(0) # owned by someone
             else:
-                observations.append(-1)
-        return np.array(observations)
+                neighbourhood.append(-1) # forbidden
+        return np.array(neighbourhood).flatten()
 
-    def move(self):
-       # random moves: tradeoff exploration / exploitation
-        self.epsilon = 80 - self.n_games
-        final_move = [0,0,0]
-        if random.randint(0, 200) < self.epsilon:
-            move = random.randint(0, 2)
-            final_move[move] = 1
-        else:
-            state0 = torch.tensor(state, dtype=torch.float)
-            prediction = self.model(state0)
-            move = torch.argmax(prediction).item()
-            final_move[move] = 1
-
-        return final_move
-
-    def _remember(self, state, action, reward, next_state, done):
+    def move(self, board):
+        # random moves: tradeoff exploration / exploitation
+        if self.is_training and np.random.rand() < 0.99*self.num_batches_learnt:
+            possible_actions = board.get_possible_actions(self.id)
+            return np.random.choice(list(possible_actions))
+        prediction = self._run_model(self.observe(board))
+        return torch.argmax(prediction).item()
+    
+    def feedback(self, old_board, action, reward, new_board, done):
+        state = self.observe(old_board)
+        next_state = self.observe(new_board)
         self.memory.append((state, action, reward, next_state, done)) # popleft if MAX_MEMORY is reached
 
-    def _train_long_memory(self):
-        if len(self.memory) > BATCH_SIZE:
-            mini_sample = random.sample(self.memory, BATCH_SIZE) # list of tuples
-        else:
-            mini_sample = self.memory
-
-        states, actions, rewards, next_states, dones = zip(*mini_sample)
-        self.trainer.train_step(states, actions, rewards, next_states, dones)
-
-    def _train_short_memory(self, state, action, reward, next_state, done):
-        self.trainer.train_step(state, action, reward, next_state, done)
+    def train(self):
+        shuffled_memory = list(self.memory)
+        random.shuffle(shuffled_memory)
+        num_batches = len(shuffled_memory) // BATCH_SIZE
+        for step in range(num_batches):
+            batch = shuffled_memory[step*BATCH_SIZE:(step+1)*BATCH_SIZE]
+            states, actions, rewards, next_states, dones = zip(*batch)
+            self.trainer.train_step(states, actions, rewards, next_states, dones)
+            self.num_batches_learnt += 1
+        self.memory.clear()

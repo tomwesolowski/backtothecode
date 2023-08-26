@@ -9,10 +9,10 @@ class LoopPlayer(Player):
         super().__init__(**kwargs)
         self.last_action = None
     
-    def move(self):
+    def move(self, board):
         if self.last_action:
             self.last_action = utils.get_opposite_action(self.last_action)
         else:
-            possible_actions = list(self.board.get_possible_actions(self.id))
+            possible_actions = list(board.get_possible_actions(self.id))
             self.last_action = np.random.choice(possible_actions)
         return self.last_action 

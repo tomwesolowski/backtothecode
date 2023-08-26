@@ -6,14 +6,16 @@ from IPython.display import display
 from .board import ReadOnlyBoard
 
 class Renderer:
-  def __init__(self) -> None:
-    pass
+    def __init__(self) -> None:
+        pass
 
-  def reset(self, board : ReadOnlyBoard):
-      self.board = board
+    def render(self, board, players, round_number):
+        raise NotImplementedError()
+    
 
-  def render(self, round_number):
-    raise NotImplementedError()
+class NoRenderer:
+    def render(self, board, players, round_number):
+        pass
 
 
 class PrintRenderer(Renderer):
@@ -22,26 +24,26 @@ class PrintRenderer(Renderer):
     self.player_marks = ['O', 'X']
     self.empty_mark = '.'
 
-  def render(self, round_number):
+  def render(self, board, players, round_number):
     print(f"------- Round {round_number}:")
-    for id in range(self.board.num_players):
-        y, x = self.board.get_position(id)
-        print(f"Player {id}: ({y}, {x})")
+    for player in players:
+        y, x = board.get_position(player.id)
+        print(f"Player {player.name}: ({y}, {x})")
     owner_to_mark = {
         -1: self.empty_mark,
     }
     position_to_player = {
-        self.board.get_position(id): id for id in range(self.board.num_players)
+        board.get_position(id): id for id in range(board.num_players)
     }
     for id, mark in enumerate(self.player_marks):
         owner_to_mark[id] = mark.lower()
-    for y in range(self.board.height):
-        for x in range(self.board.width):
+    for y in range(board.height):
+        for x in range(board.width):
             if (y, x) in position_to_player:
                 player_id = position_to_player[(y, x)]
                 print(self.player_marks[player_id], end='')
             else:
-                owner_id = self.board.get_ownership((y,x))
+                owner_id = board.get_ownership((y,x))
                 print(owner_to_mark[owner_id], end='')
         print('')
 
@@ -70,8 +72,8 @@ class CanvasRenderer(Renderer):
         for x in np.arange(0, self.grid_width * self.cell_pixels, self.cell_pixels, dtype=float):   
             self.canvas.stroke_line(x, 0, x, self.grid_height * self.cell_pixels)
     
-    def draw_owned_cells(self):
-        ownerships = self.board.get_ownerships()
+    def draw_owned_cells(self, board):
+        ownerships = board.get_ownerships()
         height, width = ownerships.shape
         for y in range(height):
             for x in range(width):
@@ -79,8 +81,8 @@ class CanvasRenderer(Renderer):
                     self.canvas.fill_style = color
                     self.canvas.fill_rect(x * self.cell_pixels, y * self.cell_pixels, self.cell_pixels, self.cell_pixels)
     
-    def draw_players(self):
-        for id, position in enumerate(self.board.get_player_positions()):
+    def draw_players(self, board):
+        for id, position in enumerate(board.get_player_positions()):
             self.canvas.stroke_style = self.player_border_color
             self.canvas.line_width = self.player_border_width
             self.canvas.fill_style = self.player_to_color[id]
@@ -95,10 +97,9 @@ class CanvasRenderer(Renderer):
             self.canvas.stroke_text(f"{player.name}: {player.score}", 
                                x=0, y=self.grid_height * self.cell_pixels + (player.id + 1) * self.font_size)
     
-    def reset(self, board : ReadOnlyBoard):
-        super().reset(board)
-        self.grid_height = self.board.height
-        self.grid_width = self.board.width
+    def draw_canvas(self, board):
+        self.grid_height = board.height
+        self.grid_width = board.width
         self.canvas = ipycanvas.Canvas(
             width=self.grid_width * self.cell_pixels, 
             height=self.grid_height * self.cell_pixels + (len(self.player_to_color) + 1) * self.font_size, 
@@ -106,12 +107,14 @@ class CanvasRenderer(Renderer):
         )
         display(self.canvas)
     
-    def render(self, round_number, players):
+    def render(self, board, players, round_number):
+        if not hasattr(self, 'canvas'):
+            self.draw_canvas(board)
         with ipycanvas.hold_canvas():
             self.canvas.clear()
             self.canvas.fill_style = self.background_color
             self.canvas.fill_rect(0, 0, self.canvas.width, self.canvas.height)
             self.draw_grid()
-            self.draw_owned_cells()
-            self.draw_players()
+            self.draw_owned_cells(board)
+            self.draw_players(board)
             self.draw_scores(players)

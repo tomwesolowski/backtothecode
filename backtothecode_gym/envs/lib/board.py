@@ -1,3 +1,4 @@
+import copy
 import numpy as np
 
 from collections import defaultdict
@@ -105,11 +106,25 @@ class Board:
                 self.set_ownership(position, player_id)
                 rewards[player_id] += 1
         # Set ownership of the surrounded cells
+        should_run_surround_algo = []
         for player_id in range(self.num_players):
-            visited_cells = set()
-            for position in self.get_free_cells():
+            position = self.get_position(player_id)
+            num_owned_neighbors = 0
+            for neighbor in utils.get_neighbours(position):
+                if self.within_board(neighbor) and self.get_ownership(position) == player_id:
+                    num_owned_neighbors += 1
+            should_run_surround_algo.append(rewards[player_id] > 0 and num_owned_neighbors >= 2)
+        # Set ownership of the surrounded cells
+        visited_cells = set()
+        free_cells = set(self.get_free_cells())
+        for player_id in range(self.num_players):
+            if not should_run_surround_algo[player_id]:
+                continue
+            for position in utils.get_all_neighbours(self.get_position(player_id)):
+                if position not in free_cells or position in visited_cells:
+                    continue
                 unclaimed_cells = set()
-                if position not in visited_cells and self._get_surrounded_cells(position, visited_cells, unclaimed_cells, player_id):
+                if self._get_surrounded_cells(position, visited_cells, unclaimed_cells, player_id):
                     # we did not hit the border nor already onwned cell
                     for position in unclaimed_cells:
                         self.set_ownership(position, player_id)
@@ -126,11 +141,11 @@ class Board:
             return True
         visited_cells.add(position)
         unclaimed_cells.add(position)
-        so_far_so_good = True
+        did_not_hit_forbidden_cell = True
         for direction in utils.get_all_directions():
             new_position = utils.move_in_direction(position, direction)
-            so_far_so_good &= self._get_surrounded_cells(new_position, visited_cells, unclaimed_cells, player_id)
-        return so_far_so_good
+            did_not_hit_forbidden_cell &= self._get_surrounded_cells(new_position, visited_cells, unclaimed_cells, player_id)
+        return did_not_hit_forbidden_cell
 
     def _find_best_direction(self, position, destination):
         best_direction, best_distance = None, 1e9
@@ -167,6 +182,9 @@ class ReadOnlyBoard:
 
     def get_player_positions(self):
         return (self.get_position(player_id) for player_id in range(self.num_players))
+    
+    def copy(self):
+        return copy.deepcopy(self)
     
     @property
     def height(self):

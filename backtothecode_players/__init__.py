@@ -1,4 +1,4 @@
-from .ai.simple from SimpleAIPlayer
+from .ai.simple import SimpleAIPlayer
 from .constant import ConstantPlayer
 from .loop import LoopPlayer
 from .keyboard import KeyboardPlayer

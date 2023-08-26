@@ -18,6 +18,16 @@ def get_all_directions():
     yield (-1, 1)  # (NE)
     yield (1, -1)  # (SW)
     yield (1, 1)   # (SE)
+    
+
+def get_neighbours(position):
+    for direction in get_directions():
+        yield move_in_direction(position, direction)
+
+
+def get_all_neighbours(position):
+    for direction in get_all_directions():
+        yield move_in_direction(position, direction)
 
 
 def get_direction_from_action(action):
