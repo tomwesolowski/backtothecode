@@ -16,6 +16,7 @@ class Board:
         for player_id in range(self.num_players):
             self.set_ownership(self.get_position(player_id), player_id) 
         self._actions_buffer = []
+        self._last_positions = self._positions.copy()
 
     @property
     def shape(self):
@@ -42,6 +43,9 @@ class Board:
 
     def get_position(self, player_id):
         return self._positions[player_id]
+    
+    def get_last_position(self, player_id):
+        return self._last_positions[player_id]
     
     def set_position(self, player_id, position):
         self._positions[player_id] = position
@@ -88,6 +92,12 @@ class Board:
         rewards = [0] * self.num_players
         move_failures = [False] * self.num_players
         new_position_count = defaultdict(int)
+        
+        self._last_positions.clear()
+        for player_id in range(self.num_players):
+            self._last_positions.append(self.get_position(player_id))
+        
+        self._last_positions
         # Move players
         for player_id, action_id in self._actions_buffer:
             try:
@@ -168,6 +178,9 @@ class ReadOnlyBoard:
     def get_position(self, player_id):
         return self._board.get_position(player_id)
     
+    def get_last_position(self, player_id):
+        return self._board.get_last_position(player_id)
+    
     def get_ownership(self, position):
         return self._board.get_ownership(position)
 
@@ -179,6 +192,9 @@ class ReadOnlyBoard:
     
     def get_possible_actions(self, player_id):
         return self._board.get_possible_actions(player_id)
+    
+    def get_free_cells(self):
+        return self._board.get_free_cells()
 
     def get_player_positions(self):
         return (self.get_position(player_id) for player_id in range(self.num_players))

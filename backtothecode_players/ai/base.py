@@ -23,8 +23,7 @@ class AIPlayer(Player):
         self.num_batches_learnt = 0
         self.gamma = 0.9 # discount rate
         self.memory = deque(maxlen=MAX_MEMORY) # popleft()
-        self._build_model()
-        self.trainer = QTrainer(self.model, lr=LR, gamma=self.gamma)
+        self.build_model()
 
         
     def reset(self, is_training=False):
@@ -81,12 +80,13 @@ class AIPlayer(Player):
         return 4
     
     
-    def _build_model(self):
+    def build_model(self):
         self.model = Linear_QNet(
-            self._get_observation_space_size(), 
-            64, 
-            BackToTheCodeEnvParams.NUM_ACTIONS
+            [self._get_observation_space_size(), 
+             64, 
+             BackToTheCodeEnvParams.NUM_ACTIONS]
         )
+        self.trainer = QTrainer(self.model, lr=LR, gamma=self.gamma)
 
     def observe(self, board):
         neighbourhood = []

@@ -35,7 +35,10 @@ def get_direction_from_action(action):
 
 
 def get_action_from_direction(direction):
-    return list(get_directions()).index(direction)
+    directions = list(get_directions())
+    if direction not in directions:
+        return -1
+    return directions.index(direction)
 
 
 def move_in_direction(position, direction):
@@ -53,3 +56,11 @@ def get_opposite_action(action):
     direction = get_direction_from_action(action)
     opp_direction = get_opposite_direction(direction)
     return get_action_from_direction(opp_direction)
+
+
+def get_action_from_neighboring_positions(begin, end):
+    bx, by = begin
+    ex, ey = end
+    dx = ex - bx
+    dy = ey - by
+    return get_action_from_direction((dx, dy))
